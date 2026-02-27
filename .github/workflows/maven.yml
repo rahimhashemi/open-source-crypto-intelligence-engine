@@ -6,19 +6,19 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Java CI with Maven
+name: CI
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
 
-permissions:
-  contents: read
-  # dependency-graph: write
+permissions: write-all
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,17 +29,11 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Show Java & Maven
-        run: |
-          java -version
-          mvn -version
-
-      - name: Build (must succeed)
-        run: mvn -B -U -DskipTests clean verify
+      - name: Build
+        run: mvn -B -DskipTests clean verify
 
       - name: Submit dependency graph
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: advanced-security/maven-dependency-submission-action@v4
         with:
-          # If your pom.xml is NOT at repo root, set the directory:
-          # directory: path/to/maven/root
           maven-args: -DskipTests
