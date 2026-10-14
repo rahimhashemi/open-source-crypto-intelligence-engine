@@ -3,15 +3,15 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/cryptointel
-    username: cryptointel
-    password: cryptointel
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cryptointel}
+    username: ${SPRING_DATASOURCE_USERNAME:cryptointel}
+    password: ${SPRING_DATASOURCE_PASSWORD:cryptointel}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
         jdbc:
           time_zone: UTC
   flyway:

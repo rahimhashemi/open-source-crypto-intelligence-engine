@@ -53,10 +53,14 @@
     </dependencies>
 
     <build>
+        <finalName>crypto-intel</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.rahim.CryptoIntelApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
