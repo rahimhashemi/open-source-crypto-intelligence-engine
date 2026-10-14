@@ -7,7 +7,7 @@ COPY api/pom.xml api/pom.xml
 COPY core/src core/src
 COPY ingest/src ingest/src
 COPY api/src api/src
-RUN mvn -B -ntp clean verify
+RUN mvn -B -ntp -DskipTests clean package
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 RUN groupadd --system app && useradd --system --gid app --home-dir /app app

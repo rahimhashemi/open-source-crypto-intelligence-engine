@@ -36,8 +36,8 @@ jobs:
           curl --fail --silent --show-error --location --max-time 10 http://localhost:8080/swagger-ui.html > /dev/null
           tables=$(docker compose exec -T db psql -U cryptointel -d cryptointel -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('candle', 'score_snapshot');")
           test "$tables" = "2"
-          migrated=$(docker compose exec -T db psql -U cryptointel -d cryptointel -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='1' AND success;")
-          test "$migrated" = "1"
+          migrated=$(docker compose exec -T db psql -U cryptointel -d cryptointel -Atc "SELECT count(*) FROM flyway_schema_history WHERE version IN ('1', '2') AND success;")
+          test "$migrated" = "2"
       - name: Show diagnostics
         if: failure()
         run: |
