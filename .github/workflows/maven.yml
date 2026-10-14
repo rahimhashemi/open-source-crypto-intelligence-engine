@@ -1,39 +1,48 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 name: CI
-
 on:
   push:
-    branches: [ "main" ]
+    branches: ["master"]
   pull_request:
-
-permissions: write-all
-
+permissions:
+  contents: read
 jobs:
-  build:
+  build-and-smoke:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
-
-      - name: Build
-        run: mvn -B -DskipTests clean verify
-
-      - name: Submit dependency graph
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: advanced-security/maven-dependency-submission-action@v4
-        with:
-          maven-args: -DskipTests
+      - name: Build and verify executable archive
+        run: |
+          mvn -B -ntp clean verify
+          jar tf api/target/crypto-intel.jar > /tmp/jar-entries.txt
+          grep -q '^BOOT-INF/classes/com/rahim/CryptoIntelApplication.class$' /tmp/jar-entries.txt
+          grep -q '^BOOT-INF/lib/' /tmp/jar-entries.txt
+      - name: Validate Compose and start stack
+        run: |
+          docker compose config --quiet
+          docker compose up --build -d
+      - name: Check API, OpenAPI and Flyway migration
+        run: |
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors --max-time 5 http://localhost:8080/health > /tmp/health.json
+          python3 -c 'import json; h=json.load(open("/tmp/health.json")); assert h["status"]=="ok" and h["service"]=="crypto-intel"'
+          curl --fail --silent --show-error --max-time 10 http://localhost:8080/v3/api-docs > /tmp/openapi.json
+          python3 -c 'import json; d=json.load(open("/tmp/openapi.json")); assert "/health" in d["paths"]'
+          curl --fail --silent --show-error --location --max-time 10 http://localhost:8080/swagger-ui.html > /dev/null
+          tables=$(docker compose exec -T db psql -U cryptointel -d cryptointel -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('candle', 'score_snapshot');")
+          test "$tables" = "2"
+          migrated=$(docker compose exec -T db psql -U cryptointel -d cryptointel -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='1' AND success;")
+          test "$migrated" = "1"
+      - name: Show diagnostics
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color
+      - name: Stop stack
+        if: always()
+        run: docker compose down --volumes

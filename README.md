@@ -1,164 +1,127 @@
-# open-source-crypto-intelligence-engine
+# Open-source Crypto Intelligence Engine
 
-Open-source crypto market intelligence engine built with Java 21, Spring Boot, and PostgreSQL.
+Java 21 / Spring Boot / PostgreSQL starter for a crypto market intelligence backend.
 
-Provides:
-- Market data ingestion (CoinEx)
-- Historical candle storage
-- Modular scoring engine
-- Rotation & momentum ranking
-- REST API
-- Dockerized local deployment
+## Current status
 
----
+This repository currently provides:
+- A Spring Boot REST application with `GET /health`.
+- Swagger UI and OpenAPI documentation.
+- Flyway migrations for `candle` and `score_snapshot`.
+- A Maven multi-module build and Docker Compose development stack.
 
-## 🚀 Why This Project Exists
+CoinEx ingestion, scoring, ranking and market endpoints are **not implemented yet**.
 
-Most crypto tools are:
-- Chart-focused
-- Indicator-heavy
-- Not extensible
-- Not backend-oriented
+## Quick start with Docker
 
-Crypto Intel Engine is different.
-
-It is a **modular market intelligence backend framework** designed for:
-- Traders
-- Researchers
-- SaaS builders
-- Quant developers
-- Fintech startups
-
-This is infrastructure — not a signal bot.
-
----
-
-## 🧠 Architecture Overview
-
-```
-
-API (REST + DB + Scheduler)
-│
-CORE (Scoring & Domain Logic)
-│
-INGEST (CoinEx Adapter)
-
-````
-
-### Modules
-
-| Module | Responsibility |
-|--------|---------------|
-| core | Domain models + scoring strategies |
-| ingest | External data acquisition (CoinEx API) |
-| api | REST endpoints + persistence + jobs |
-
----
-
-## ⚙️ Tech Stack
-
-- Java 21
-- Spring Boot 3
-- Maven
-- PostgreSQL
-- Flyway
-- Docker
-- OpenAPI (Swagger)
-
----
-
-## 🐳 Quick Start (10 Minutes)
-
-### 1. Clone
-```bash
-git clone https://github.com/
-cd crypto-intel
-````
-
-### 2. Run with Docker
+Requires Docker Engine or Docker Desktop and the Docker Compose v2 plugin.
+No local Java or Maven installation is needed.
 
 ```bash
-docker compose up --build
+git clone https://github.com/rahimhashemi/open-source-crypto-intelligence-engine.git
+cd open-source-crypto-intelligence-engine
+docker compose up --build -d
+docker compose logs -f api
 ```
 
-### 3. Open API Docs
+The API starts after PostgreSQL passes its health check. The first build downloads
+Maven dependencies and container images; allow time for startup.
 
-```
-http://localhost:8080/swagger-ui.html
-```
+- API: http://localhost:8080/health
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI: http://localhost:8080/v3/api-docs
 
-### 4. Health Check
-
-```
-GET http://localhost:8080/health
-```
-
----
-
-## 📊 Available Endpoints
-
-* `GET /health`
-* `GET /scores/top`
-* `GET /coins/{symbol}`
-* `GET /coins/{symbol}/candles`
-
----
-
-## 🔍 Scoring System
-
-The engine uses a pluggable scoring system:
-
-```java
-interface ScoreStrategy {
-    double score(MarketSeries series);
-    double weight();
-}
+```bash
+curl --fail http://localhost:8080/health
 ```
 
-Current strategies:
-
-* Relative Strength
-* Volume Acceleration
-* Volatility Regime
-
-Composite score = weighted sum (0–100).
-
----
-
-## 🔌 Extending the Engine
-
-You can:
-
-* Add new exchanges (implement adapter)
-* Add new indicators
-* Add new scoring strategies
-* Build a frontend dashboard
-* Integrate into a trading system
-* Use it as a SaaS backend
-
----
-
-## 📈 Roadmap
-
-* [ ] Sector rotation engine
-* [ ] Watchlist
-* [ ] Alert rules
-* [ ] Multi-exchange support
-* [ ] Backtesting module
-* [ ] WebSocket ingestion
-* [ ] SaaS version
-
----
-
-## 🛡 License
-
-MIT License
-
----
-
-## ⚠ Disclaimer
-
-This project is for research and educational purposes.
-It does not provide financial advice.
-
+Expected response (JSON key order may differ):
+```json
+{"status":"ok","service":"crypto-intel"}
 ```
+
+The health endpoint checks HTTP availability only; it does not check database
+readiness after startup.
+
+### Configuration
+
+Defaults work without an environment file. To override them:
+```bash
+cp .env.example .env
+```
+
+Edit `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT` or `API_PORT`,
+then start the stack. Ports are bound to localhost. These default credentials
+are for local development. PostgreSQL initialization variables apply only to
+a new data volume; changing them does not update existing database credentials.
+
+If port 5432 is occupied, set `DB_PORT=5433`. The API still connects to
+`db:5432` inside the Compose network. Use the configured `API_PORT` in browser
+and curl URLs.
+
+### Stop and restart
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+The named database volume survives `down`. To delete **all local database data**
+and initialize from scratch:
+```bash
+docker compose down --volumes
+docker compose up --build -d
+```
+
+## Run with local Java and Maven
+
+Requires JDK 21 and Maven 3.9.x. Run commands from the repository root:
+```bash
+docker compose up -d db
+mvn -B -ntp clean verify
+java -jar api/target/crypto-intel.jar
+```
+
+The application defaults to `localhost:5432/cryptointel` with local credentials
+`cryptointel` / `cryptointel`. For custom database settings, export
+`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and
+`SPRING_DATASOURCE_PASSWORD` before running Java. Compose reads `.env`; a locally
+started JVM does not automatically read it.
+
+Flyway applies migrations on startup. Hibernate validates the schema and does
+not create it.
+
+## Modules
+
+| Module | Intended responsibility | Current implementation |
+| --- | --- | --- |
+| core | Domain models and scoring strategies | Placeholder |
+| ingest | Exchange adapters and data ingestion | Placeholder |
+| api | REST, persistence, jobs and application wiring | Bootstrap, health, OpenAPI and migrations |
+
+The core and ingest modules still contain IDE-generated sample classes.
+The API is the only deployable Spring Boot module.
+
+## Continuous integration
+
+Pull requests and pushes to `master` run:
+1. Maven `clean verify` without skipping tests.
+2. Verification that the API archive contains Spring Boot classes and dependencies.
+3. A clean Docker Compose build and startup.
+4. HTTP checks for health, OpenAPI and Swagger UI.
+5. PostgreSQL checks for migrated tables and a successful Flyway V1 migration.
+
+There are currently no unit tests. The CI smoke checks validate application
+packaging and startup, not future market or scoring behavior.
+
+## Roadmap
+
+- CoinEx historical candle ingestion and idempotent persistence.
+- Market and candle REST endpoints.
+- Scoring strategies, momentum ranking and score snapshots.
+- Data validation and tests for exchange failures and duplicate ingestion.
+- Additional exchanges, watchlists, alerts and backtesting.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
