@@ -17,3 +17,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+coinex:
+  base-url: ${COINEX_BASE_URL:https://api.coinex.com/v2}
+  timeout: ${COINEX_TIMEOUT:5s}
