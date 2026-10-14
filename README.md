@@ -152,7 +152,7 @@ Pull requests and pushes to `master` run:
 2. Verification that the API archive contains Spring Boot classes and dependencies.
 3. A clean Docker Compose build and startup.
 4. HTTP checks for health, OpenAPI and Swagger UI.
-5. PostgreSQL checks for migrated tables and a successful Flyway V1 migration.
+5. PostgreSQL checks for migrated tables and successful Flyway V1/V2 migrations.
 
 Unit tests validate the candle domain and HTTP error/timeout handling. API integration
 tests use Testcontainers PostgreSQL and a local fake CoinEx HTTP server, covering
